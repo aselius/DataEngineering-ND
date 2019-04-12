@@ -9,9 +9,9 @@ time_table_drop = "DROP TABLE IF EXISTS time"
 # CREATE TABLES
 
 songplay_table_create = ("""
-CREATE TABLE songplay (songplay_id serial PRIMARY KEY, start_time integer REFERENCES time (start_time),
-user_id integer REFERENCES users (user_id), level varchar REFERENCES users (level),
-song_id integer REFERENCES songs (song_id), artist_id integer REFERENCES artists (artist_id), session_id serial,
+CREATE TABLE songplay (songplay_id serial PRIMARY KEY, start_time integer REFERENCES time,
+user_id integer REFERENCES users, level varchar REFERENCES users,
+song_id integer REFERENCES songs, artist_id integer REFERENCES artists, session_id serial,
 location varchar, user_agent varchar);
 """)
 
@@ -20,7 +20,7 @@ gender varchar, level varchar);
 """)
 
 song_table_create = ("""CREATE TABLE songs (song_id serial PRIMARY KEY, title varchar,
-artist_id integer REFERECES artists (artist_id), year integer, duration float);
+artist_id integer REFERENCES artists, year integer, duration float);
 """)
 
 artist_table_create = ("""CREATE TABLE artists (artist_id serial PRIMARY KEY, name varchar, location varchar,
@@ -56,5 +56,6 @@ song_select = ("""
 
 # QUERY LISTS
 
-create_table_queries = [songplay_table_create, user_table_create, song_table_create, artist_table_create, time_table_create]
+create_table_queries = [user_table_create, artist_table_create, song_table_create, time_table_create,
+                        songplay_table_create]
 drop_table_queries = [songplay_table_drop, user_table_drop, song_table_drop, artist_table_drop, time_table_drop]

@@ -1,13 +1,27 @@
 import os
 import glob
+import json
+
 import psycopg2
 import pandas as pd
+
 from sql_queries import *
+
+
+def get_files(filepath):
+    all_files = []
+    for root, dirs, files in os.walk(filepath):
+        files = glob.glob(os.path.join(root, '*.json'))
+        for f in files:
+            all_files.append(os.path.abspath(f))
+    return all_files
 
 
 def process_song_file(cur, filepath):
     # open song file
-    df = 
+    with open(filepath, 'r') as f:
+        df = json.load(f)
+    df = pd.DataFrame(data=df, index=[0])
 
     # insert song record
     song_data = 
@@ -20,7 +34,8 @@ def process_song_file(cur, filepath):
 
 def process_log_file(cur, filepath):
     # open log file
-    df = 
+
+    df =
 
     # filter by NextSong action
     df = 
