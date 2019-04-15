@@ -1,77 +1,81 @@
+import collections
+import datetime
 import os
 import glob
 import json
 
 import psycopg2
-import pandas as pd
 
 from sql_queries import *
-
-
-def get_files(filepath):
-    all_files = []
-    for root, dirs, files in os.walk(filepath):
-        files = glob.glob(os.path.join(root, '*.json'))
-        for f in files:
-            all_files.append(os.path.abspath(f))
-    return all_files
 
 
 def process_song_file(cur, filepath):
     # open song file
     with open(filepath, 'r') as f:
-        df = json.load(f)
-    df = pd.DataFrame(data=df, index=[0])
+        data = json.load(f)
+    data = collections.OrderedDict(sorted(data.items()))
+
+    song_keys = ['song_id', 'title', 'artist_id', 'year', 'duration']
+
+    # TODO: Change the table create query so that the column names are alphabetical to avoid doing this resort
+    # insert artist record
+    artist_data = [data['artist_id'], data['artist_name'], data['artist_location'], data['artist_latitude'],
+                   data['artist_longitude']]
+    cur.execute(artist_table_insert, artist_data)
 
     # insert song record
-    song_data = 
+    song_data = [data['song_id'], data['title'], data['artist_id'], data['year'], data['duration']]
     cur.execute(song_table_insert, song_data)
-    
-    # insert artist record
-    artist_data = 
-    cur.execute(artist_table_insert, artist_data)
 
 
 def process_log_file(cur, filepath):
     # open log file
-
-    df =
+    data = []
+    with open(filepath, 'r') as f:
+        for line in f:
+            data.append(json.loads(line))
 
     # filter by NextSong action
-    df = 
+    data = [entry for entry in data if entry['page'] == 'NextSong']
 
     # convert timestamp column to datetime
-    t = 
-    
-    # insert time data records
-    time_data = 
-    column_labels = 
-    time_df = 
+    for idx, entry in enumerate(data):
+        data[idx]['datetime'] = (datetime.datetime.fromtimestamp(entry['ts'] / 1000))
 
-    for i, row in time_df.iterrows():
+    ts = []
+    # convert datetime objects into time format we want
+    for idx, row in enumerate(data):
+        dt = row['datetime']
+        ts.append([dt.timestamp(), dt.hour, dt.day, dt.isocalendar()[1], dt.month, dt.year,
+                   datetime.datetime.weekday(dt)])
+
+    for row in ts:
         cur.execute(time_table_insert, list(row))
 
     # load user table
-    user_df = 
+    users = []
+    for entry in data:
+        users.append([entry['userId'], entry['firstName'], entry['lastName'], entry['gender'], entry['level']])
 
     # insert user records
-    for i, row in user_df.iterrows():
+    for row in users:
         cur.execute(user_table_insert, row)
 
     # insert songplay records
-    for index, row in df.iterrows():
-        
+    for row in data:
+
         # get songid and artistid from song and artist tables
-        cur.execute(song_select, (row.song, row.artist, row.length))
+        cur.execute(song_select, (row['song'], row['artist'], row['length']))
         results = cur.fetchone()
-        
+
         if results:
             songid, artistid = results
         else:
             songid, artistid = None, None
 
         # insert songplay record
-        songplay_data = 
+        songplay_data = [row['datetime'].timestamp(), row['userId'], row['level'], songid, artistid, row['sessionId'],
+                         row['location'], row['userAgent']]
         cur.execute(songplay_table_insert, songplay_data)
 
 
@@ -79,8 +83,8 @@ def process_data(cur, conn, filepath, func):
     # get all files matching extension from directory
     all_files = []
     for root, dirs, files in os.walk(filepath):
-        files = glob.glob(os.path.join(root,'*.json'))
-        for f in files :
+        files = glob.glob(os.path.join(root, '*.json'))
+        for f in files:
             all_files.append(os.path.abspath(f))
 
     # get total number of files found
@@ -95,7 +99,12 @@ def process_data(cur, conn, filepath, func):
 
 
 def main():
-    conn = psycopg2.connect("host=127.0.0.1 dbname=sparkifydb user=student password=student")
+    conn = psycopg2.connect(
+        host='localhost',
+        port=54320,
+        dbname='sparkifydb',
+        user='postgres'
+    )
     cur = conn.cursor()
 
     process_data(cur, conn, filepath='data/song_data', func=process_song_file)
